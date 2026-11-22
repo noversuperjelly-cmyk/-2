@@ -1,4 +1,4 @@
-name: Extract Ori main binary
+name: Analyze Ori IL2CPP metadata
 on:
   push:
     branches: [main]
@@ -7,26 +7,47 @@ permissions:
   contents: read
   actions: write
 jobs:
-  extract:
+  dump:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-      - name: Join split archive
-        run: cat main.7z.001 main.7z.002 > main.7z
-      - name: Extract main
+      - name: Join and extract NSO
         run: |
+          cat main.7z.001 main.7z.002 > main.7z
           sudo apt-get update
           sudo apt-get install -y p7zip-full
           mkdir extracted
           7z x main.7z -oextracted -y
-          find extracted -maxdepth 2 -type f -printf '%p %s bytes\n'
-          test -n "$(find extracted -maxdepth 2 -type f -name main -print -quit)"
-          sha256sum extracted/main
-      - name: Upload raw main
+          test -s extracted/main
+          test -s global-metadata.dat
+          file extracted/main
+          sha256sum extracted/main global-metadata.dat
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 6.0.x
+      - name: Download Il2CppDumper
+        run: |
+          curl -L --fail -o dumper.zip https://github.com/Perfare/Il2CppDumper/releases/download/v6.7.46/Il2CppDumper-net6-v6.7.46.zip
+          mkdir dumper
+          unzip -q dumper.zip -d dumper
+          find dumper -maxdepth 2 -type f | head -30
+      - name: Dump IL2CPP
+        run: |
+          mkdir dump
+          dotnet dumper/Il2CppDumper.dll extracted/main global-metadata.dat dump
+          ls -lah dump
+          test -s dump/dump.cs
+      - name: Upload analysis
         uses: actions/upload-artifact@v4
         with:
-          name: ori-main-binary
-          path: extracted/main
+          name: ori-il2cpp-analysis
+          path: |
+            dump/dump.cs
+            dump/il2cpp.h
+            dump/script.json
+            dump/stringliteral.json
+            dump/ghidra.py
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 3
