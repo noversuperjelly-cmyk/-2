@@ -1,0 +1,22 @@
+name: Export Ori metadata artifact
+on:
+  push:
+    paths:
+      - '.github/workflows/export-metadata.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Package metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: ori-global-metadata
+          path: global-metadata.dat
+          if-no-files-found: error
+          retention-days: 1
