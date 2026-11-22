@@ -29,6 +29,9 @@ jobs:
           rfo,rmem,rsize=struct.unpack_from('<III',b,0x20)
           rcsize=struct.unpack_from('<I',b,0x64)[0]
           rodata=lz4.block.decompress(b[rfo:rfo+rcsize],uncompressed_size=rsize)
+          rfo,rmem,rsize=struct.unpack_from('<III',b,0x20)
+          rcsize=struct.unpack_from('<I',b,0x64)[0]
+          rodata=lz4.block.decompress(b[rfo:rfo+rcsize],uncompressed_size=rsize)
           md=Cs(CS_ARCH_ARM64,CS_MODE_ARM)
           md.detail=True
           targets={
