@@ -1,0 +1,27 @@
+name: Assemble Ori main archive
+on:
+  push:
+    paths:
+      - '.github/workflows/assemble-main.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Join split 7z volumes
+        run: |
+          cat main.7z.001 main.7z.002 > main.7z
+          sha256sum main.7z
+          ls -lh main.7z
+      - name: Upload joined archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: ori-main-archive
+          path: main.7z
+          if-no-files-found: error
+          retention-days: 1
