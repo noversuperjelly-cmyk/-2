@@ -1,8 +1,7 @@
 name: Assemble Ori main archive
 on:
   push:
-    paths:
-      - '.github/workflows/assemble-main.yml'
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
