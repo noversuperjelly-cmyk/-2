@@ -1,4 +1,4 @@
-name: Disassemble Ori camera methods
+name: Disassemble Ori camera and aspect methods
 on:
   push:
     branches: [main]
@@ -23,26 +23,28 @@ jobs:
           import struct,lz4.block
           from capstone import *
           b=open('main','rb').read()
-          # NSO text segment
           fo,mem,usize=struct.unpack_from('<III',b,0x10)
           csize=struct.unpack_from('<I',b,0x60)[0]
           seg=lz4.block.decompress(b[fo:fo+csize],uncompressed_size=usize)
           md=Cs(CS_ARCH_ARM64,CS_MODE_ARM)
           md.detail=True
           targets={
-            'MaintainAspectRatio_Awake':0x37BC330,
-            'MaintainAspectRatio_LateUpdate':0x37BC380,
-            'GameplayCamera_get_CameraWidthWorldUnits':0x3B7B6E0,
-            'GameplayCamera_IsOnScreen':0x3B7B080,
-            'GameplayCamera_Awake':0x3B7C070,
-            'CameraController_UpdateCamera':0x430EA20,
-            'CameraController_UpdateFrustrumPlanes':0x430DE20,
+            'AspectRatioManager_get_AspectRatio':(0x36B0050,0x180),
+            'AspectRatioManager_FixedUpdate':(0x36B61F0,0x500),
+            'MaintainAspectRatio_LateUpdate':(0x37BC380,0x240),
+            'ScalePositionForAspectRatio_ApplyAspect':(0x39C5AE0,0x240),
+            'ScaleWidthForAspectRatio_ApplyAspect':(0x39C6520,0x240),
+            'GameplayCamera_get_CameraWidthWorldUnits':(0x3B7B6E0,0x180),
+            'CameraController_UpdateCamera':(0x430EA20,0x300),
+            'CameraController_UpdateFrustrumPlanes':(0x430DE20,0x300),
           }
           with open('camera-disasm.txt','w') as out:
-            for name,addr in targets.items():
+            out.write('CONSTANTS\\n')
+            for x in [0x614E878,0x614EB10,0x614E568]:
+              out.write(f'{x:#x}: {struct.unpack_from("<f",seg,x)[0]} bytes={seg[x:x+4].hex()}\\n')
+            for name,(addr,size) in targets.items():
               out.write(f'\\n===== {name} RVA 0x{addr:X} =====\\n')
-              # emit 0x300 bytes; funcs generally smaller, inspect boundaries manually
-              for i in md.disasm(seg[addr:addr+0x300],addr):
+              for i in md.disasm(seg[addr:addr+size],addr):
                 out.write(f'{i.address:08X}: {i.mnemonic:8} {i.op_str}\\n')
           PY
       - uses: actions/upload-artifact@v4
