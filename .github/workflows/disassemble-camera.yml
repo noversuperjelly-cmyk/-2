@@ -1,0 +1,52 @@
+name: Disassemble Ori camera methods
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  disasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full python3-pip
+          python3 -m pip install --break-system-packages capstone
+      - name: Extract NSO and disassemble
+        run: |
+          cat main.7z.001 main.7z.002 > main.7z
+          7z x main.7z -y
+          python3 - <<'PY'
+          import struct,lz4.block
+          from capstone import *
+          b=open('main','rb').read()
+          # NSO text segment
+          fo,mem,usize=struct.unpack_from('<III',b,0x10)
+          csize=struct.unpack_from('<I',b,0x60)[0]
+          seg=lz4.block.decompress(b[fo:fo+csize],uncompressed_size=usize)
+          md=Cs(CS_ARCH_ARM64,CS_MODE_ARM)
+          md.detail=True
+          targets={
+            'MaintainAspectRatio_Awake':0x37BC330,
+            'MaintainAspectRatio_LateUpdate':0x37BC380,
+            'GameplayCamera_get_CameraWidthWorldUnits':0x3B7B6E0,
+            'GameplayCamera_IsOnScreen':0x3B7B080,
+            'GameplayCamera_Awake':0x3B7C070,
+            'CameraController_UpdateCamera':0x430EA20,
+            'CameraController_UpdateFrustrumPlanes':0x430DE20,
+          }
+          with open('camera-disasm.txt','w') as out:
+            for name,addr in targets.items():
+              out.write(f'\\n===== {name} RVA 0x{addr:X} =====\\n')
+              # emit 0x300 bytes; funcs generally smaller, inspect boundaries manually
+              for i in md.disasm(seg[addr:addr+0x300],addr):
+                out.write(f'{i.address:08X}: {i.mnemonic:8} {i.op_str}\\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ori-camera-disassembly
+          path: camera-disasm.txt
+          retention-days: 7
