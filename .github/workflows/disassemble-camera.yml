@@ -26,6 +26,9 @@ jobs:
           fo,mem,usize=struct.unpack_from('<III',b,0x10)
           csize=struct.unpack_from('<I',b,0x60)[0]
           seg=lz4.block.decompress(b[fo:fo+csize],uncompressed_size=usize)
+          rfo,rmem,rsize=struct.unpack_from('<III',b,0x20)
+          rcsize=struct.unpack_from('<I',b,0x64)[0]
+          rodata=lz4.block.decompress(b[rfo:rfo+rcsize],uncompressed_size=rsize)
           md=Cs(CS_ARCH_ARM64,CS_MODE_ARM)
           md.detail=True
           targets={
@@ -41,7 +44,7 @@ jobs:
           with open('camera-disasm.txt','w') as out:
             out.write('CONSTANTS\\n')
             for x in [0x614E878,0x614EB10,0x614E568]:
-              out.write(f'{x:#x}: {struct.unpack_from("<f",seg,x)[0]} bytes={seg[x:x+4].hex()}\\n')
+              out.write(f'{x:#x}: {struct.unpack_from("<f",rodata,x-rmem)[0]} bytes={rodata[x-rmem:x-rmem+4].hex()}\\n')
             for name,(addr,size) in targets.items():
               out.write(f'\\n===== {name} RVA 0x{addr:X} =====\\n')
               for i in md.disasm(seg[addr:addr+size],addr):
