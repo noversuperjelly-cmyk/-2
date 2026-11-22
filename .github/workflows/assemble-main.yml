@@ -36,7 +36,7 @@ jobs:
       - name: Dump IL2CPP
         run: |
           mkdir dump
-          dotnet dumper/Il2CppDumper.dll extracted/main global-metadata.dat dump || test -s dump/dump.cs
+          dotnet dumper/Il2CppDumper.dll extracted/main global-metadata.dat dump || true || test -s dump/dump.cs
           ls -lah dump
           test -s dump/dump.cs
       - name: Upload analysis
