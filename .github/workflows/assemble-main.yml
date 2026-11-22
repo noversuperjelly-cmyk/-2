@@ -1,4 +1,4 @@
-name: Assemble Ori main archive
+name: Extract Ori main binary
 on:
   push:
     branches: [main]
@@ -7,20 +7,26 @@ permissions:
   contents: read
   actions: write
 jobs:
-  assemble:
+  extract:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-      - name: Join split 7z volumes
+      - name: Join split archive
+        run: cat main.7z.001 main.7z.002 > main.7z
+      - name: Extract main
         run: |
-          cat main.7z.001 main.7z.002 > main.7z
-          sha256sum main.7z
-          ls -lh main.7z
-      - name: Upload joined archive
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full
+          mkdir extracted
+          7z x main.7z -oextracted -y
+          find extracted -maxdepth 2 -type f -printf '%p %s bytes\n'
+          test -n "$(find extracted -maxdepth 2 -type f -name main -print -quit)"
+          sha256sum extracted/main
+      - name: Upload raw main
         uses: actions/upload-artifact@v4
         with:
-          name: ori-main-archive
-          path: main.7z
+          name: ori-main-binary
+          path: extracted/main
           if-no-files-found: error
           retention-days: 1
