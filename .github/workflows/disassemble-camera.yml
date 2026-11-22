@@ -14,7 +14,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y p7zip-full python3-pip
-          python3 -m pip install --break-system-packages capstone
+          python3 -m pip install --break-system-packages capstone lz4
       - name: Extract NSO and disassemble
         run: |
           cat main.7z.001 main.7z.002 > main.7z
